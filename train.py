@@ -238,7 +238,7 @@ if __name__ == '__main__':
         print('#'*30)
         os.makedirs(args.weights_directory, exist_ok=True)
         weights_path = f'{args.weights_directory}/{model}_{detector}{n_sectors}.pth'
-        labels = create_labels_from_hdf(args.hdf_file, n_sectors)
+        labels = create_labels_from_hdf(args.hdf_file, n_sectors, args.HEALPix)
         if args.method==1:
             net = MLP(n_sectors, args.use_KAGRA)
         else:

@@ -95,14 +95,16 @@ def create_dataframe(hdf_paths):
                     features_i.append(ccc)
                     
             features[i] = features_i
+	
+	M = np.concatenate([M, features])
 
     dec, ra, snr = np.array(dec), np.array(ra), np.array(snr)
 
     # Standarization
-    if l>1:
-        for i in range(features.shape[1]):
-            features[:,i] -= np.mean(features[:,i])
-            features[:,i] /= np.std(features[:,i])
+    if M.shape[0] > 1:
+        for i in range(M.shape[1]):
+            M[:,i] -= np.mean(M[:,i])
+            M[:,i] /= np.std(M[:,i])
 
     columns = ["Delay HL","Max-Corr HL","Delay-Ana HL","Max-Corr-Ana HL",
                "Amp-Ratio HL","Phase-lag HL","Corr-Coef HL",
@@ -116,8 +118,8 @@ def create_dataframe(hdf_paths):
                "Amp-Ratio LK","Phase-lag LK","Corr-Coef LK",
                "Delay VK","Max-Corr VK","Delay-Ana VK","Max-Corr-Ana VK",
                "Amp-Ratio VK","Phase-lag VK","Corr-Coef VK"
-               ]
-    df = pd.DataFrame(features, columns=columns)
+              ]
+    df = pd.DataFrame(M, columns=columns)
     df['dec'] = dec
     df['ra'] = ra
     df['snr'] = snr

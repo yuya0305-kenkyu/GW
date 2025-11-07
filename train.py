@@ -213,7 +213,7 @@ if __name__ == '__main__':
         if args.csv_file:
             df = pd.read_csv(args.csv_file)
         else:
-            create_dataframe(args.hdf_file)
+            df = create_dataframe(args.hdf_file)
 
         if args.save_csv_path:
             os.makedirs(os.path.dirname(args.save_csv_path), exist_ok=True)

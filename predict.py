@@ -81,7 +81,7 @@ def predict_MLP(X_test, labels, n_sectors, use_KAGRA, weights_path, method):
     if method == 3:
         return y_pred.detach().numpy()
     else:
-        accuracy = sum(labels == y_pred_max) / len(X_test)
+        accuracy = float(sum(labels == y_pred_max) / len(X_test))
 
         return y_pred.detach().numpy(), accuracy
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         if args.csv_file:
             df = pd.read_csv(args.csv_file)
         else:
-            create_dataframe(args.hdf_file)
+            df = create_dataframe(args.hdf_file)
 
         if args.save_csv_path:
             os.makedirs(os.path.dirname(args.save_csv_path), exist_ok=True)
@@ -149,7 +149,7 @@ if __name__ == '__main__':
             y_pred = r*y_pred1 + (1-r)*y_pred2
             y_pred_max = np.argmax(y_pred, axis=1)
 
-            accuracy = sum(labels == y_pred_max) / len(labels)
+            accuracy = float(sum(labels == y_pred_max) / len(labels))
 
         else:
             raise RuntimeError('Choose method 1, 2, or 3.')

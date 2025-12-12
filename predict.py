@@ -21,7 +21,81 @@ from torch.utils.data import DataLoader
 from preprocess import (create_array_from_hdf, create_dataframe,
                         create_labels_from_hdf, create_test_dataloader,
                         drop_KAGRA, fix_seed)
-from train import MLP, TCN, TemporalBlock, TemporalConvNet
+from train import MLP
+class TemporalBlock(nn.Module):
+    def __init__(self, n_inputs, n_outputs, kernel_size, \
+                 stride, dilation, padding, dropout):
+        super(TemporalBlock, self).__init__()
+
+        self.conv1 = nn.Conv1d(
+            n_inputs, n_outputs, kernel_size, stride, int(padding/2), dilation
+        )
+        self.bn1 = nn.BatchNorm1d(n_outputs, eps=1e-03, momentum=0.01)
+        self.prelu1 = nn.PReLU()
+        self.dropout1 = nn.Dropout(dropout)
+
+        self.conv2 = nn.Conv1d(
+            n_outputs, n_outputs, kernel_size, stride, int(padding/2), dilation
+        )
+        self.bn2 = nn.BatchNorm1d(n_outputs, eps=1e-03, momentum=0.01)
+        self.prelu2 = nn.PReLU()
+        self.dropout2 = nn.Dropout(dropout)
+
+        self.net = nn.Sequential(
+            self.conv1, self.bn1, self.prelu1, self.dropout1,
+            self.conv2, self.bn2, self.prelu2, self.dropout2
+        )
+
+        if n_inputs != n_outputs:
+            self.downsample = nn.Conv1d(n_inputs, n_outputs, 1)
+        else:
+            self.downsample = None
+        self.prelu = nn.PReLU()
+        self.init_weights()
+
+    def init_weights(self):
+        torch.nn.init.kaiming_normal_(self.conv1.weight)
+        torch.nn.init.kaiming_normal_(self.conv2.weight)
+        if self.downsample is not None:
+            torch.nn.init.kaiming_normal_(self.downsample.weight)
+
+    def forward(self, x):
+        out = self.net(x)
+        res = x if self.downsample is None else self.downsample(x)
+        return self.prelu(out + res)
+
+
+class TemporalConvNet(nn.Module):
+    def __init__(self, num_inputs, num_channels, kernel_size, dropout):
+        super(TemporalConvNet, self).__init__()
+        layers = []
+        num_levels = len(num_channels)
+        for i in range(num_levels):
+            dilation_size = 2 ** i
+            in_channels = num_inputs if i == 0 else num_channels[i-1]
+            out_channels = num_channels[i]
+            layers += \
+            [TemporalBlock(in_channels, out_channels, kernel_size, \
+                           stride=1, dilation=dilation_size, \
+                           padding=(kernel_size-1)*dilation_size, dropout=dropout)
+            ]
+
+        self.network = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.network(x)
+
+class TCN(nn.Module):
+    def __init__(self, input_size, output_size, \
+                 num_channels, kernel_size, dropout):
+        super(TCN, self).__init__()
+        self.tcn = TemporalConvNet(input_size, num_channels, kernel_size, dropout)
+        self.linear = nn.Linear(num_channels[-1], output_size)
+
+    def forward(self, x):
+        x = self.tcn(x)
+        x = self.linear(x[:,:,-1])
+        return x
 
 
 def get_arguments():
@@ -44,7 +118,7 @@ def predict_TCN(test_dataloader, labels, n_sectors, \
                 input_size, use_KAGRA, weights_path, device, method):
     net = TCN(
         input_size=input_size, output_size=n_sectors,
-        num_channels=[64]*7, kernel_size=3, dropout=0
+        num_channels=[64]*7, kernel_size=7, dropout=0
     )
 
     net.to(device)

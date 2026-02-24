@@ -82,34 +82,28 @@ class AugmentedDataset(torch.utils.data.Dataset):
         return torch.from_numpy(x).float(), torch.tensor(y, dtype=torch.long)
 
 def create_augmented_dataloader(df, arr, labels, batch_size, training_size):
-    # TCN用のデータ (配列) がある場合
     if len(arr) > 0:
         X = arr
-    # MLP用のデータ (DataFrame) の場合
     else:
-        # DataFrameをNumpy配列に変換
         X = df.drop(['dec','ra','snr'], axis=1).values
-
     y = labels
 
-    # データを訓練用と検証用に分割 (ここでは単純に8:2で分割)
-    # 必要に応じて stratify=y をつけるとラベル比率を維持できます
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42, shuffle=True
-    )
+    # === 修正ポイント: train_test_splitを廃止し、順番通りに分割 ===
+    # （これにより、異なるシードで生成したファイルの独立性が保たれます）
+    X_train = X[:training_size]
+    X_val   = X[training_size:]
+    y_train = y[:training_size]
+    y_val   = y[training_size:]
 
     # データセットの作成
-    # 訓練用データだけ transform=True にしてデータ拡張を有効にする
     train_dataset = AugmentedDataset(X_train, y_train, transform=True)
-    val_dataset = AugmentedDataset(X_val, y_val, transform=False) # 検証用は拡張しない！
+    val_dataset = AugmentedDataset(X_val, y_val, transform=False) 
 
     # DataLoaderの作成
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     return {'train': train_loader, 'val': val_loader}
-
-# ▲▲▲ 追加ここまで ▲▲▲
 
 def train_model(net, dataloaders_dict, criterion, \
                 optimizer, scheduler, num_epochs, n_sectors, weights_path):
@@ -262,7 +256,14 @@ class TCN(nn.Module):
 
     def forward(self, x):
         x = self.tcn(x)
-        x = self.linear(x[:,:,-1])
+        
+        # 修正前：一番最後の時間ステップだけを取り出していた（ゼロ埋めの影響大）
+        # x = self.linear(x[:,:,-1]) 
+        
+        # 修正後：時間方向（dim=2）全体から最も強い特徴を抽出する (Global Max Pooling)
+        x = torch.max(x, dim=2)[0]
+        x = self.linear(x)
+        
         return x
 
 class MLP(nn.Module):

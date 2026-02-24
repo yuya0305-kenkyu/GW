@@ -146,7 +146,7 @@ def generate_dataset():
             strain_data = noise.numpy().copy()
             
             # 信号(sig_final)を、絶対時間を基準にしてノイズ配列上の正しいインデックスへ加算
-            start_idx = int(round((sig_final.start_time - noise.start_time) * sample_rate))
+            start_idx = int(round((float(sig_final.start_time) - float(noise.start_time)) * sample_rate))
             end_idx = start_idx + len(sig_final)
             
             slice_start, slice_end = max(0, start_idx), min(len(strain_data), end_idx)
@@ -158,7 +158,7 @@ def generate_dataset():
                 
             # 4. 指定範囲 (-0.20秒 〜 +0.05秒) の抽出
             ext_start_time = PARAMS['slice_start']
-            ext_start_idx = int(round((ext_start_time - noise.start_time) * sample_rate))
+            ext_start_idx = int(round((float(ext_start_time) - float(noise.start_time)) * sample_rate))
             ext_end_idx = ext_start_idx + slice_points
             
             data_slice = strain_data[ext_start_idx:ext_end_idx]

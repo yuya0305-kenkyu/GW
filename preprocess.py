@@ -96,7 +96,7 @@ def create_dataframe(hdf_paths):
                     
             features[i] = features_i
 	
-	M = np.concatenate([M, features])
+    M = np.concatenate([M, features])
 
     dec, ra, snr = np.array(dec), np.array(ra), np.array(snr)
 

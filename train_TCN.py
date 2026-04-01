@@ -367,3 +367,11 @@ if __name__ == '__main__':
         history = train_model(net, dataloaders_dict, criterion, optimizer, \
                               scheduler, args.epoch, n_sectors, weights_path
                              )
+        
+        # ▼▼▼ ここから追加 ▼▼▼
+        # history辞書をpandasのDataFrameに変換してCSV保存
+        history_df = pd.DataFrame(history)
+        history_csv_path = f'{args.weights_directory}/history_{model}_{detector}{n_sectors}.csv'
+        history_df.to_csv(history_csv_path, index=False)
+        print(f'Saved learning history to {history_csv_path}')
+        # ▲▲▲ ここまで追加 ▲▲▲
